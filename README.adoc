@@ -1,0 +1,67 @@
+= Reactive CDI
+
+A set of small modules to help using CDI in reactive context.
+
+== Scope, a.k.a. `ReactiveScoped`
+
+Reactive scope enables to put in reactive context bean instances.
+It is defined with `@ReactiveScoped` scope annotation:
+
+[source,java]
+----
+@ReactiveScoped
+public class MyService {}
+----
+
+The definition of the scope is handled thanks to `ReactiveContext`.
+The instance to use can be injected as any bean:
+
+[source,java]
+----
+@Inject
+private ReactiveContext context;
+----
+
+It must be:
+
+1. Started thanks to `var ctx = context.init();`: it initializes a new reactive context which beans new bean instances (for a new request or exchange for ex.).
+2. Each thread it is used in must be resetted once it is no more needed: `context.reset(previousContextSnapshot);`: it restores the previous context - delete it if there was no previous context.
+3. When no more needed by any thread it must be destroyed with `context.clean(ctx)`: it destroys the contextual for the `ctx` bean instances.
+
+The propagation is done thanks to `ReactiveContext.Ctx` methods. The easiest is to use `wrap()` methods which wrap `Runnable` or `Supplier` in a context aware instance:
+
+[source,java]
+----
+final Runnable myTask = () -> {...};
+
+final var ctx = reactiveContext.current();
+final Runnable wrapped = ctx.wrap(myTask);
+threadPool.submit(wrapped); // will be executed in the reactive context of the caller
+----
+
+=== Executor and ExecutorService
+
+The `ReactiveContext` provides `wrap` method for executors and executor services enabling to quickly make a thread pool reactive friendly.
+
+
+=== CompletionStage
+
+The `ReactiveContext` provides `wrap` method for completion stages and futures.
+
+WARNING: however, this wrapping is limited to synchronous callbacks and not `Async` flavors. For such cases, the executor wrapping will be needed too.
+
+== Servlet integration
+
+Servlet integration is done with a `Filter` you have to position in your filter chain where you want to start the reactive context.
+This filter class is `com.github.rmannibucau.reactive.cdi.servlet.RootReactiveContextFilter`.
+It is async friendly, i.e. if you use `AsyncContext` of servlet specification, it will make its `start()` method reactive aware and the automatically started reactive scope will be destroyed at the end of the request (asynchronous or not).
+
+To register the filter, you can use `web.xml` registration, `ServletContainerInitializer` or any other way.
+Another simple solution is to subclass the filter to register it:
+
+[source,java]
+----
+@Dependent
+@WebFilter(urlPatterns = "/*", asyncSupported = true)
+public class Register extends RootReactiveContextFilter {}
+----
