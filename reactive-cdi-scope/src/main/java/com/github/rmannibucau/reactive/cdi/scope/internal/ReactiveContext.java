@@ -74,7 +74,7 @@ public class ReactiveContext implements AlterableContext {
     public Runnable wrapRunnable(final Runnable delegate) {
         final var current = current();
         try {
-            return () -> current.wrap(delegate);
+            return current.wrap(delegate);
         } finally {
             current.release();
         }
@@ -83,7 +83,7 @@ public class ReactiveContext implements AlterableContext {
     public <A, B> BiConsumer<A, B> wrapBiConsumer(final BiConsumer<A, B> delegate) {
         final var current = current();
         try {
-            return (a, b) -> current.wrap(() -> delegate.accept(a, b));
+            return (a, b) -> current.wrap(() -> delegate.accept(a, b)).run();
         } finally {
             current.release();
         }
@@ -115,11 +115,11 @@ public class ReactiveContext implements AlterableContext {
     }
 
     public <T> CompletableFuture<T> wrapCompletableFuture(final CompletableFuture<T> promise) {
-        return new ReactiveCompletionFuture<T>(this, promise);
+        return new ReactiveCompletionFuture<>(this, promise);
     }
 
     public <T> CompletionStage<T> wrapCompletionStage(final CompletionStage<T> promise) {
-        return new ReactiveCompletionFuture<T>(this, promise);
+        return new ReactiveCompletionFuture<>(this, promise);
     }
 
     public Executor wrapExecutor(final Executor executor) {
