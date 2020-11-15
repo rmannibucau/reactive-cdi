@@ -29,12 +29,12 @@ class ReactiveScopedTest {
     @Test
     void control() {
         assertFalse(isActive());
-        final var previous = context.init();
+        final var previous = context.start();
         assertTrue(isActive());
         assertEquals(1, bean.getConstructed());
         assertEquals(0, bean.getDestroyed());
         final var self = bean.self();
-        context.clean(previous);
+        context.finish(previous);
         context.reset(previous);
         assertEquals(1, self.getDestroyed());
         assertFalse(isActive());
@@ -43,7 +43,7 @@ class ReactiveScopedTest {
     @Test
     void propagate() {
         assertFalse(isActive());
-        final var previous = context.init();
+        final var previous = context.start();
         assertTrue(isActive());
         assertEquals(1, bean.getConstructed());
         assertEquals(0, bean.getDestroyed());
@@ -68,7 +68,7 @@ class ReactiveScopedTest {
 
         assertEquals(0, self.getDestroyed());
         assertFalse(isActive());
-        context.clean(previous); // finally destroy beans
+        context.finish(previous); // finally destroy beans
         assertEquals(1, self.getDestroyed());
     }
 

@@ -20,7 +20,6 @@ import javax.ws.rs.client.ClientBuilder;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletionStage;
-import java.util.concurrent.Executor;
 
 import static java.util.concurrent.CompletableFuture.completedStage;
 import static javax.ws.rs.core.MediaType.TEXT_PLAIN;
@@ -82,7 +81,7 @@ class RootReactiveContextFilterTest {
                     },
                     // not required for this simple app to wrap (since we use a single instance we can access by ref)
                     // but the general pattern is right
-                    context.wrap((Executor) command -> new Thread(command).start()));
+                    context.wrapExecutor(command -> new Thread(command).start()));
         }
 
         @PostConstruct

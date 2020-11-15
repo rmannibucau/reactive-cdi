@@ -24,9 +24,9 @@ private ReactiveContext context;
 
 It must be:
 
-1. Started thanks to `var ctx = context.init();`: it initializes a new reactive context which beans new bean instances (for a new request or exchange for ex.).
+1. Started thanks to `var ctx = context.start();`: it initializes a new reactive context which beans new bean instances (for a new request or exchange for ex.).
 2. Each thread it is used in must be resetted once it is no more needed: `context.reset(previousContextSnapshot);`: it restores the previous context - delete it if there was no previous context.
-3. When no more needed by any thread it must be destroyed with `context.clean(ctx)`: it destroys the contextual for the `ctx` bean instances.
+3. When no more needed by any thread it must be destroyed with `context.finish(ctx)`: it destroys the contextual for the `ctx` bean instances.
 
 The propagation is done thanks to `ReactiveContext.Ctx` methods. The easiest is to use `wrap()` methods which wrap `Runnable` or `Supplier` in a context aware instance:
 
@@ -35,18 +35,18 @@ The propagation is done thanks to `ReactiveContext.Ctx` methods. The easiest is 
 final Runnable myTask = () -> {...};
 
 final var ctx = reactiveContext.current();
-final Runnable wrapped = ctx.wrap(myTask);
+final Runnable wrapped = ctx.wrapExecutor(myTask);
 threadPool.submit(wrapped); // will be executed in the reactive context of the caller
 ----
 
 === Executor and ExecutorService
 
-The `ReactiveContext` provides `wrap` method for executors and executor services enabling to quickly make a thread pool reactive friendly.
+The `ReactiveContext` provides `wrap*` methods for executors and executor services enabling to quickly make a thread pool reactive friendly.
 
 
 === CompletionStage
 
-The `ReactiveContext` provides `wrap` method for completion stages and futures.
+The `ReactiveContext` provides `wrap*` methods for completion stages and futures.
 
 WARNING: however, this wrapping is limited to synchronous callbacks and not `Async` flavors. For such cases, the executor wrapping will be needed too.
 

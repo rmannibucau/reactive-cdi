@@ -16,7 +16,6 @@ import javax.enterprise.context.spi.CreationalContext;
 import javax.enterprise.inject.Vetoed;
 import java.io.Serializable;
 import java.lang.annotation.Annotation;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
@@ -36,7 +35,7 @@ import static java.util.Collections.emptyMap;
 public class ReactiveContext implements AlterableContext {
     private final ThreadLocal<Map<Contextual<?>, BeanInstanceBag<?>>> instances = new ThreadLocal<>();
 
-    public Flow.Subscription wrap(final Flow.Subscription delegate) {
+    public Flow.Subscription wrapSubscription(final Flow.Subscription delegate) {
         final var current = current();
         try {
             return new ReactiveSubscription(delegate, current);
@@ -45,7 +44,7 @@ public class ReactiveContext implements AlterableContext {
         }
     }
 
-    public <A, B> Flow.Processor<A, B> wrap(final Flow.Processor<A, B> delegate) {
+    public <A, B> Flow.Processor<A, B> wrapProcessor(final Flow.Processor<A, B> delegate) {
         final var current = current();
         try {
             return new ReactiveProcessor<>(delegate, current);
@@ -54,7 +53,7 @@ public class ReactiveContext implements AlterableContext {
         }
     }
 
-    public <A> Flow.Subscriber<A> wrap(final Flow.Subscriber<A> delegate) {
+    public <A> Flow.Subscriber<A> wrapSubscriber(final Flow.Subscriber<A> delegate) {
         final var current = current();
         try {
             return new ReactiveSubscriber<>(delegate, current);
@@ -63,7 +62,7 @@ public class ReactiveContext implements AlterableContext {
         }
     }
 
-    public <A> Flow.Publisher<A> wrap(final Flow.Publisher<A> delegate) {
+    public <A> Flow.Publisher<A> wrapPublisher(final Flow.Publisher<A> delegate) {
         final var current = current();
         try {
             return new ReactivePublisher<>(delegate, current);
@@ -72,7 +71,7 @@ public class ReactiveContext implements AlterableContext {
         }
     }
 
-    public Runnable wrap(final Runnable delegate) {
+    public Runnable wrapRunnable(final Runnable delegate) {
         final var current = current();
         try {
             return () -> current.wrap(delegate);
@@ -81,7 +80,7 @@ public class ReactiveContext implements AlterableContext {
         }
     }
 
-    public <A, B> BiConsumer<A, B> wrap(final BiConsumer<A, B> delegate) {
+    public <A, B> BiConsumer<A, B> wrapBiConsumer(final BiConsumer<A, B> delegate) {
         final var current = current();
         try {
             return (a, b) -> current.wrap(() -> delegate.accept(a, b));
@@ -90,7 +89,7 @@ public class ReactiveContext implements AlterableContext {
         }
     }
 
-    public <A, B, C> BiFunction<A, B, C> wrap(final BiFunction<A, B, C> delegate) {
+    public <A, B, C> BiFunction<A, B, C> wrapBiFunction(final BiFunction<A, B, C> delegate) {
         final var current = current();
         try {
             return (a, b) -> current.wrap(() -> delegate.apply(a, b)).get();
@@ -99,7 +98,7 @@ public class ReactiveContext implements AlterableContext {
         }
     }
 
-    public <A, B> Function<A, B> wrap(final Function<A, B> delegate) {
+    public <A, B> Function<A, B> wrapFunction(final Function<A, B> delegate) {
         final var current = current();
         try {
             return a -> current.wrap(() -> delegate.apply(a)).get();
@@ -108,36 +107,36 @@ public class ReactiveContext implements AlterableContext {
         }
     }
 
-    public <A> Consumer<A> wrap(final Consumer<A> delegate) {
-        return this.<A, Void>wrap(a -> {
+    public <A> Consumer<A> wrapConsumer(final Consumer<A> delegate) {
+        return this.<A, Void>wrapFunction(a -> {
             delegate.accept(a);
             return null;
         })::apply;
     }
 
-    public <T> CompletableFuture<T> wrap(final CompletableFuture<T> promise) {
+    public <T> CompletableFuture<T> wrapCompletableFuture(final CompletableFuture<T> promise) {
         return new ReactiveCompletionFuture<T>(this, promise);
     }
 
-    public <T> CompletionStage<T> wrap(final CompletionStage<T> promise) {
+    public <T> CompletionStage<T> wrapCompletionStage(final CompletionStage<T> promise) {
         return new ReactiveCompletionFuture<T>(this, promise);
     }
 
-    public Executor wrap(final Executor executor) {
+    public Executor wrapExecutor(final Executor executor) {
         return new ReactiveExecutor(this, executor);
     }
 
-    public ExecutorService wrap(final ExecutorService executor) {
+    public ExecutorService wrapExecutorService(final ExecutorService executor) {
         return new ReactiveExecutorService(this, executor);
     }
 
-    public Ctx init() {
+    public Ctx start() {
         final var bags = new ConcurrentHashMap<Contextual<?>, BeanInstanceBag<?>>();
         instances.set(bags);
         return new Ctx(this, true, Thread.currentThread(), bags);
     }
 
-    public void clean(final Ctx ctx) {
+    public void finish(final Ctx ctx) {
         final var bags = ctx.bags;
         if (bags == null) {
             return;
@@ -259,13 +258,11 @@ public class ReactiveContext implements AlterableContext {
         if (bags == null) {
             previous = new Ctx(this, false, thread, null);
             if (ctx.bags != null) {
-                instances.set(new ConcurrentHashMap<>(ctx.bags));
+                instances.set(ctx.bags);
             }
         } else {
-            previous = new Ctx(this, false, thread, new HashMap<>(bags));
-            if (ctx.bags != null) {
-                ctx.bags.forEach(bags::putIfAbsent);
-            }
+            previous = new Ctx(this, false, thread, bags);
+            instances.set(ctx.bags);
         }
         if (ctx.bags == null) {
             instances.remove();

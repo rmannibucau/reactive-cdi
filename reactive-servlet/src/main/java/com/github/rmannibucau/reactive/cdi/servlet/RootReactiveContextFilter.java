@@ -23,7 +23,7 @@ public class RootReactiveContextFilter implements Filter {
     @Override
     public void doFilter(final ServletRequest request, final ServletResponse response,
                          final FilterChain chain) throws IOException, ServletException {
-        final var rootCtx = context.init();
+        final var rootCtx = context.start();
         request.setAttribute(ReactiveContext.Ctx.class.getName(), rootCtx);
         try {
             chain.doFilter(new HttpServletRequestWrapper(HttpServletRequest.class.cast(request)) {
@@ -40,7 +40,7 @@ public class RootReactiveContextFilter implements Filter {
             }, response);
         } finally {
             if (!request.isAsyncStarted()) {
-                context.clean(rootCtx);
+                context.finish(rootCtx);
             }
             context.reset(rootCtx); // does not destroy instances but clean up the thread local to avoid to leak
         }
@@ -61,7 +61,7 @@ public class RootReactiveContextFilter implements Filter {
         }
 
         private void onEnd() { // end of the request we can destroy the context we created
-            scope.clean(root);
+            scope.finish(root);
         }
 
         @Override
