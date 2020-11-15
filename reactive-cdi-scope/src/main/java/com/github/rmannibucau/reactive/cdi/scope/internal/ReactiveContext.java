@@ -253,19 +253,12 @@ public class ReactiveContext implements AlterableContext {
     }
 
     private Ctx setState(final Ctx ctx, final Thread thread) {
-        var bags = instances.get();
-        Ctx previous;
-        if (bags == null) {
-            previous = new Ctx(this, false, thread, null);
-            if (ctx.bags != null) {
-                instances.set(ctx.bags);
-            }
-        } else {
-            previous = new Ctx(this, false, thread, bags);
-            instances.set(ctx.bags);
-        }
+        final var bags = instances.get();
+        final var previous = new Ctx(this, false, thread, bags);
         if (ctx.bags == null) {
             instances.remove();
+        } else {
+            instances.set(ctx.bags);
         }
         return previous;
     }
