@@ -279,15 +279,10 @@ public class ReactiveContext implements AlterableContext {
         }
 
         public Runnable wrap(final Runnable task) {
-            final var current = ctx.current();
-            try {
-                return wrap(() -> {
-                    task.run();
-                    return null;
-                })::get;
-            } finally {
-                current.release();
-            }
+            return wrap(() -> {
+                task.run();
+                return null;
+            })::get;
         }
 
         public <T> Supplier<T> wrap(final Supplier<T> task) {
